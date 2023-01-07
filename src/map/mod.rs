@@ -1,6 +1,8 @@
+use std::time::Instant;
+
 use self::tile::{Direction, Tile};
 use image::DynamicImage;
-use rand::{thread_rng, Rng};
+use rand::{rngs::ThreadRng, Rng};
 mod tile;
 
 #[derive(Debug, Default, Clone)]
@@ -58,63 +60,87 @@ impl Map {
         });
     }
 
-    pub fn generate_map(&mut self) {
-        let mut rng = thread_rng();
+    pub fn build(&mut self, rng: &mut ThreadRng) {
+        let time = Instant::now();
         self.clear();
 
-        let grid = self.history.last().cloned().unwrap().grid;
-        let mut pos = rng.gen_range(0..grid.len());
+        let mut num_retries = 0;
+
+        while !self.generate_map(rng) {
+            num_retries += 1;
+            self.history.clear();
+        }
+
+        let elapsed = time.elapsed().as_secs_f32();
+
+        println!("Map generated after {} retries", num_retries);
+        println!("Time taken: {}", elapsed);
+        println!("Per try: {}", elapsed / (num_retries + 1) as f32);
+    }
+
+    fn generate_map(&mut self, rng: &mut ThreadRng) -> bool {
+        self.clear();
 
         loop {
             let mut grid = self.history.last().cloned().unwrap().grid;
+            let occupied = grid.iter().filter(|t| t.is_some()).count();
+            if occupied == self.size * self.size {
+                return true;
+            }
 
-            let directions = vec![
-                self.move_index(pos, Direction::North),
-                self.move_index(pos, Direction::East),
-                self.move_index(pos, Direction::South),
-                self.move_index(pos, Direction::West),
-            ];
-
-            let possible_directions: Vec<(usize, Vec<Tile>)> = directions
-                .into_iter()
-                .flatten()
-                .filter(|index| grid[*index].is_none())
-                .map(|index| (index, self.get_possible_variants(index)))
-                .collect();
-
-            let least_entropy = possible_directions
+            let free_neighbors = self.get_free_neighbors(&grid);
+            let least_entropy = free_neighbors
                 .iter()
-                .min_by(|(_, a_tile), (_, b_tile)| a_tile.len().cmp(&b_tile.len()));
+                .min_by(|(_, a_tile), (_, b_tile)| a_tile.len().cmp(&b_tile.len()))
+                .map(|(_, tile)| tile);
 
-            if let Some((_, least_entropy)) = least_entropy {
-                let possibilties: Vec<(usize, Vec<Tile>)> = possible_directions
-                    .clone()
-                    .into_iter()
+            if let Some(least_entropy) = least_entropy {
+                let possibilties: Vec<&(usize, Vec<Tile>)> = free_neighbors
+                    .iter()
                     .filter(|(index, _)| {
                         self.get_possible_variants(*index).len() == least_entropy.len()
                     })
                     .collect();
 
                 if possibilties.is_empty() {
-                    break;
+                    return false;
                 }
 
-                if let Some((next_index, next_tile)) =
-                    possibilties.get(rng.gen_range(0..possibilties.len()))
-                {
-                    if next_tile.is_empty() {
-                        break;
-                    }
-
-                    grid[*next_index] = Some(next_tile[rng.gen_range(0..next_tile.len())].clone());
-                    pos = *next_index;
-
-                    self.history.push(Snapshot { grid });
+                let (next_index, next_tile) = possibilties[rng.gen_range(0..possibilties.len())];
+                if next_tile.is_empty() {
+                    return false;
                 }
+
+                grid[*next_index] = Some(next_tile[rng.gen_range(0..next_tile.len())].clone());
+                self.history.push(Snapshot { grid });
             } else {
-                break;
+                return false;
             }
         }
+    }
+
+    fn get_free_neighbors(&self, grid: &[Option<Tile>]) -> Vec<(usize, Vec<Tile>)> {
+        let mut neighbors = vec![];
+
+        for index in 0..grid.len() {
+            let directions = vec![
+                self.move_index(index, Direction::North),
+                self.move_index(index, Direction::East),
+                self.move_index(index, Direction::South),
+                self.move_index(index, Direction::West),
+            ];
+
+            let mut possibilities: Vec<(usize, Vec<Tile>)> = directions
+                .into_iter()
+                .flatten()
+                .filter(|index| grid[*index].is_none())
+                .map(|index| (index, self.get_possible_variants(index)))
+                .collect();
+
+            neighbors.append(&mut possibilities);
+        }
+
+        neighbors
     }
 
     fn clear(&mut self) {

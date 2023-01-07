@@ -1,6 +1,6 @@
-use std::time::Instant;
-
+use ::rand::thread_rng;
 use macroquad::prelude::*;
+use std::time::Instant;
 mod map;
 
 const TILE_SIZE: f32 = 16.0;
@@ -22,14 +22,15 @@ async fn main() {
         load_texture("assets/1.png").await.unwrap(),
     ];
 
-    let mut map = map::Map::new(60);
+    let mut rng = thread_rng();
+    let mut map = map::Map::new(40);
     let mut map_image = image::io::Reader::open("maps/test.png")
         .expect("Failed to open map image!")
         .decode()
         .expect("Failed to decode map image!");
 
     map.load_tiles(&mut map_image, 3);
-    map.generate_map();
+    map.build(&mut rng);
 
     let mut timer = Instant::now();
 
