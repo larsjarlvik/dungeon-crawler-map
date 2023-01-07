@@ -20,11 +20,14 @@ async fn main() {
     let assets = vec![
         load_texture("assets/0.png").await.unwrap(),
         load_texture("assets/1.png").await.unwrap(),
+        load_texture("assets/2.png").await.unwrap(),
+        load_texture("assets/3.png").await.unwrap(),
+        load_texture("assets/4.png").await.unwrap(),
     ];
 
     let mut rng = thread_rng();
     let mut map = map::Map::new(40);
-    let mut map_image = image::io::Reader::open("maps/test.png")
+    let mut map_image = image::io::Reader::open("maps/test-4.png")
         .expect("Failed to open map image!")
         .decode()
         .expect("Failed to decode map image!");
@@ -42,7 +45,7 @@ async fn main() {
         }
         if is_key_down(KeyCode::Space)
             && history_index < map.history.len() - 1
-            && timer.elapsed().as_secs_f32() > 0.05
+            && timer.elapsed().as_secs_f32() > 0.02
         {
             history_index += 1;
             timer = Instant::now();

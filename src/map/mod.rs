@@ -1,9 +1,8 @@
-use std::time::Instant;
-
 use self::tile::{Direction, Tile, TileEdges};
 use image::DynamicImage;
 use itertools::Itertools;
 use rand::{rngs::ThreadRng, Rng};
+use std::time::Instant;
 mod tile;
 
 #[derive(Debug, Clone)]
@@ -105,7 +104,6 @@ impl Map {
 
     fn generate_map(&mut self, rng: &mut ThreadRng) -> bool {
         self.clear();
-
         let mut remaining = self.size * self.size;
 
         loop {
@@ -124,13 +122,9 @@ impl Map {
                 let possibilties: Vec<&(usize, Vec<usize>)> = free_neighbors
                     .iter()
                     .filter(|(index, _)| {
-                        self.get_possible_variants(*index).len() == least_entropy.len()
+                        self.get_possible_variants(&grid, *index).len() == least_entropy.len()
                     })
                     .collect();
-
-                if possibilties.is_empty() {
-                    return false;
-                }
 
                 let (next_index, next_tile) = possibilties[rng.gen_range(0..possibilties.len())];
                 if next_tile.is_empty() {
@@ -152,16 +146,16 @@ impl Map {
         (0..grid.len())
             .into_iter()
             .flat_map(|index| {
-                let directions = [
+                let neighbors = [
                     self.move_index(index, Direction::North),
                     self.move_index(index, Direction::East),
                     self.move_index(index, Direction::South),
                     self.move_index(index, Direction::West),
                 ];
 
-                directions.into_iter().flatten().filter_map(|index| {
+                neighbors.into_iter().flatten().filter_map(|index| {
                     if grid[index].is_none() {
-                        Some((index, self.get_possible_variants(index)))
+                        Some((index, self.get_possible_variants(grid, index)))
                     } else {
                         None
                     }
@@ -172,41 +166,36 @@ impl Map {
     }
 
     fn clear(&mut self) {
-        let mut grid: Vec<Option<GridTile>> = vec![];
-        for _ in 0..self.size {
-            for _ in 0..self.size {
-                grid.push(None)
-            }
-        }
-
-        self.history.push(Snapshot { grid });
+        self.history.push(Snapshot {
+            grid: vec![None; self.size * self.size],
+        });
     }
 
-    fn get_possible_variants(&self, index: usize) -> Vec<usize> {
+    fn get_possible_variants(&self, grid: &[Option<GridTile>], index: usize) -> Vec<usize> {
         let variants = self
             .variants
             .iter()
             .enumerate()
             .filter_map(|(variant_index, variant)| {
-                if let Some(tile) = self.get_tile(self.move_index(index, Direction::North)) {
+                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::North)) {
                     if variant.edges.north != tile.edges.south {
                         return None;
                     }
                 }
 
-                if let Some(tile) = self.get_tile(self.move_index(index, Direction::East)) {
+                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::East)) {
                     if variant.edges.east != tile.edges.west {
                         return None;
                     }
                 }
 
-                if let Some(tile) = self.get_tile(self.move_index(index, Direction::South)) {
+                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::South)) {
                     if variant.edges.south != tile.edges.north {
                         return None;
                     }
                 }
 
-                if let Some(tile) = self.get_tile(self.move_index(index, Direction::West)) {
+                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::West)) {
                     if variant.edges.west != tile.edges.east {
                         return None;
                     }
@@ -246,12 +235,14 @@ impl Map {
         None
     }
 
-    fn get_tile(&self, index: Option<usize>) -> Option<&GridTile> {
-        let map = self.history.last().expect("No history!");
-
+    fn get_tile<'a>(
+        &self,
+        grid: &'a [Option<GridTile>],
+        index: Option<usize>,
+    ) -> Option<&'a GridTile> {
         if let Some(index) = index {
-            if let Some(tile) = map.grid.get(index) {
-                tile.into()
+            if let Some(tile) = grid.get(index) {
+                tile.as_ref()
             } else {
                 None
             }
