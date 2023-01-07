@@ -210,11 +210,9 @@ impl Map {
         let map = self.history.last().expect("No history!");
 
         if let Some(tile) = map.grid.get(index) {
-            if let Some(tile) = tile {
-                return Some(tile);
-            }
+            tile.into()
+        } else {
+            None
         }
-
-        None
     }
 }
