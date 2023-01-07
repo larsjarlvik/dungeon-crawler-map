@@ -13,7 +13,7 @@ pub struct GridTile {
 }
 
 impl GridTile {
-    pub fn from_tile(tile: &Tile) -> Self {
+    pub fn from_variant(tile: &Tile) -> Self {
         Self {
             edges: tile.edges.clone(),
             index: tile.index,
@@ -69,7 +69,7 @@ impl Map {
             grid: self
                 .variants
                 .iter()
-                .map(|t| Some(GridTile::from_tile(t)))
+                .map(|t| Some(GridTile::from_variant(t)))
                 .collect(),
         });
 
@@ -80,14 +80,13 @@ impl Map {
             grid: self
                 .variants
                 .iter()
-                .map(|t| Some(GridTile::from_tile(t)))
+                .map(|t| Some(GridTile::from_variant(t)))
                 .collect(),
         });
     }
 
     pub fn build(&mut self, rng: &mut ThreadRng) {
         let time = Instant::now();
-        self.clear();
 
         let mut tries = 1;
         while !self.generate_map(rng) {
@@ -103,8 +102,8 @@ impl Map {
     }
 
     fn generate_map(&mut self, rng: &mut ThreadRng) -> bool {
-        self.clear();
-        let mut remaining = self.size * self.size;
+        self.clear(rng);
+        let mut remaining = self.size * self.size - 1;
 
         loop {
             let mut grid = self.history.last().cloned().unwrap().grid;
@@ -132,7 +131,7 @@ impl Map {
                 }
 
                 let variant = next_tile[rng.gen_range(0..next_tile.len())];
-                grid[*next_index] = Some(GridTile::from_tile(&self.variants[variant]));
+                grid[*next_index] = Some(GridTile::from_variant(&self.variants[variant]));
                 self.history.push(Snapshot { grid });
             } else {
                 return false;
@@ -145,6 +144,7 @@ impl Map {
     fn get_free_neighbors(&self, grid: &[Option<GridTile>]) -> Vec<(usize, Vec<usize>)> {
         (0..grid.len())
             .into_iter()
+            .filter(|index| grid[*index].is_some())
             .flat_map(|index| {
                 let neighbors = [
                     self.move_index(index, Direction::North),
@@ -165,10 +165,13 @@ impl Map {
             .collect()
     }
 
-    fn clear(&mut self) {
-        self.history.push(Snapshot {
-            grid: vec![None; self.size * self.size],
-        });
+    fn clear(&mut self, rng: &mut ThreadRng) {
+        let mut grid = vec![None; self.size * self.size];
+        grid[rng.gen_range(0..(self.size * self.size))] = Some(GridTile::from_variant(
+            &self.variants[rng.gen_range(0..self.variants.len())],
+        ));
+
+        self.history.push(Snapshot { grid });
     }
 
     fn get_possible_variants(&self, grid: &[Option<GridTile>], index: usize) -> Vec<usize> {
