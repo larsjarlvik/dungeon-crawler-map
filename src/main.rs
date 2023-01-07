@@ -33,9 +33,9 @@ async fn main() {
         .expect("Failed to decode map image!");
 
     map.load_tiles(&mut map_image, 3);
-    map.build(&mut rng);
+    map.build(&mut rng, false);
 
-    let mut timer = Instant::now();
+    let mut update_timer = Instant::now();
 
     loop {
         clear_background(BLACK);
@@ -45,10 +45,10 @@ async fn main() {
         }
         if is_key_down(KeyCode::Space)
             && history_index < map.history.len() - 1
-            && timer.elapsed().as_secs_f32() > 0.02
+            && update_timer.elapsed().as_secs_f32() > 0.02
         {
             history_index += 1;
-            timer = Instant::now();
+            update_timer = Instant::now();
         }
 
         let half_size = (map.size as i32) / 2;

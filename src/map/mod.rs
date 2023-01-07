@@ -85,11 +85,11 @@ impl Map {
         });
     }
 
-    pub fn build(&mut self, rng: &mut ThreadRng) {
+    pub fn build(&mut self, rng: &mut ThreadRng, log_history: bool) {
         let time = Instant::now();
 
         let mut tries = 1;
-        while !self.generate_map(rng) {
+        while !self.generate_map(rng, log_history) {
             tries += 1;
             self.history.clear();
         }
@@ -101,13 +101,17 @@ impl Map {
         println!("Per try: {}", elapsed / tries as f32);
     }
 
-    fn generate_map(&mut self, rng: &mut ThreadRng) -> bool {
-        self.clear(rng);
+    fn generate_map(&mut self, rng: &mut ThreadRng, log_history: bool) -> bool {
+        let mut grid = self.clear(rng);
+        if log_history {
+            self.history.push(Snapshot { grid: grid.clone() });
+        }
+
         let mut remaining = self.size * self.size - 1;
 
         loop {
-            let mut grid = self.history.last().cloned().unwrap().grid;
             if remaining == 0 {
+                self.history.push(Snapshot { grid });
                 return true;
             }
 
@@ -132,7 +136,10 @@ impl Map {
 
                 let variant = next_tile[rng.gen_range(0..next_tile.len())];
                 grid[*next_index] = Some(GridTile::from_variant(&self.variants[variant]));
-                self.history.push(Snapshot { grid });
+
+                if log_history {
+                    self.history.push(Snapshot { grid: grid.clone() });
+                }
             } else {
                 return false;
             }
@@ -165,13 +172,12 @@ impl Map {
             .collect()
     }
 
-    fn clear(&mut self, rng: &mut ThreadRng) {
+    fn clear(&mut self, rng: &mut ThreadRng) -> Vec<Option<GridTile>> {
         let mut grid = vec![None; self.size * self.size];
         grid[rng.gen_range(0..(self.size * self.size))] = Some(GridTile::from_variant(
             &self.variants[rng.gen_range(0..self.variants.len())],
         ));
-
-        self.history.push(Snapshot { grid });
+        grid
     }
 
     fn get_possible_variants(&self, grid: &[Option<GridTile>], index: usize) -> Vec<usize> {
