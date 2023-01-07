@@ -35,14 +35,14 @@ async fn main() {
     let mut timer = Instant::now();
 
     loop {
-        clear_background(DARKGRAY);
+        clear_background(BLACK);
 
         if is_key_pressed(KeyCode::Escape) {
             return;
         }
         if is_key_down(KeyCode::Space)
             && history_index < map.history.len() - 1
-            && timer.elapsed().as_secs_f32() > 0.1
+            && timer.elapsed().as_secs_f32() > 0.05
         {
             history_index += 1;
             timer = Instant::now();
