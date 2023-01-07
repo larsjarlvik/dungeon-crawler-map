@@ -1,12 +1,9 @@
-use builder::{tile::TileType, Map};
-use macroquad::prelude::*;
-use std::{f32::consts, fs};
-mod builder;
+use std::time::Instant;
 
-const ROT_0: f32 = 0.0;
-const ROT_1: f32 = consts::FRAC_PI_2;
-const ROT_2: f32 = consts::PI;
-const ROT_3: f32 = consts::PI + consts::FRAC_PI_2;
+use macroquad::prelude::*;
+mod map;
+
+const TILE_SIZE: f32 = 16.0;
 
 fn window_conf() -> Conf {
     Conf {
@@ -19,54 +16,54 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf())]
 async fn main() {
-    let empty: Texture2D = load_texture("assets/empty.png").await.unwrap();
-    let floor: Texture2D = load_texture("assets/floor.png").await.unwrap();
-    let constraint: Texture2D = load_texture("assets/constraint.png").await.unwrap();
-    let corner: Texture2D = load_texture("assets/corner.png").await.unwrap();
-    let wall: Texture2D = load_texture("assets/wall.png").await.unwrap();
+    let mut history_index = 0;
+    let assets = vec![
+        load_texture("assets/0.png").await.unwrap(),
+        load_texture("assets/1.png").await.unwrap(),
+    ];
 
-    let sample = Map::from_string(fs::read_to_string("assets/map.txt").unwrap());
-    let history = builder::Map::build(sample);
-    let mut index = 0;
+    let mut map = map::Map::new(60);
+    let mut map_image = image::io::Reader::open("maps/test.png")
+        .expect("Failed to open map image!")
+        .decode()
+        .expect("Failed to decode map image!");
+
+    map.load_tiles(&mut map_image, 3);
+    map.generate_map();
+
+    let mut timer = Instant::now();
 
     loop {
-        clear_background(BLACK);
-
-        let mut x = 0;
-        let mut y = 0;
+        clear_background(DARKGRAY);
 
         if is_key_pressed(KeyCode::Escape) {
             return;
         }
-        if is_key_pressed(KeyCode::Space) {
-            index += 1;
-            index %= history.len();
+        if is_key_down(KeyCode::Space)
+            && history_index < map.history.len() - 1
+            && timer.elapsed().as_secs_f32() > 0.1
+        {
+            history_index += 1;
+            timer = Instant::now();
         }
 
-        clear_background(BLACK);
+        let half_size = (map.size as i32) / 2;
+        let mut x: i32 = -half_size;
+        let mut y: i32 = -half_size;
 
-        let map = history[index].clone();
-        let w2 = map.width / 2;
-        let h2 = map.height / 2;
+        for tile in map.history[history_index].grid.iter() {
+            let (nx, ny) = get_xy(x, y);
 
-        for tile in map.tiles.iter() {
-            match tile {
-                TileType::Empty => draw_block(empty, x - w2, y - h2, ROT_0),
-                TileType::Floor => draw_block(floor, x - w2, y - h2, ROT_0),
-                TileType::Constraint => draw_block(constraint, x - w2, y - h2, ROT_0),
-                TileType::CornerTL => draw_block(corner, x - w2, y - h2, ROT_0),
-                TileType::CornerTR => draw_block(corner, x - w2, y - h2, ROT_1),
-                TileType::CornerBR => draw_block(corner, x - w2, y - h2, ROT_2),
-                TileType::CornerBL => draw_block(corner, x - w2, y - h2, ROT_3),
-                TileType::WallL => draw_block(wall, x - w2, y - h2, ROT_0),
-                TileType::WallT => draw_block(wall, x - w2, y - h2, ROT_1),
-                TileType::WallR => draw_block(wall, x - w2, y - h2, ROT_2),
-                TileType::WallB => draw_block(wall, x - w2, y - h2, ROT_3),
+            if let Some(tile) = tile {
+                let rotation = (tile.rotation.clone() as u8) as f32 * std::f32::consts::FRAC_PI_2;
+                draw_block(assets[tile.index], nx, ny, rotation);
+            } else {
+                draw_rectangle(nx, ny, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
             }
 
             x += 1;
-            if x >= map.width {
-                x = 0;
+            if x >= half_size {
+                x = -half_size;
                 y += 1;
             }
         }
@@ -75,10 +72,14 @@ async fn main() {
     }
 }
 
-fn draw_block(texture: Texture2D, x: i32, y: i32, rotation: f32) {
-    let x = (screen_width() / 2.0 - 8.0) + (x as f32 * 16.0);
-    let y = (screen_height() / 2.0 - 8.0) + (y as f32 * 16.0);
+fn get_xy(x: i32, y: i32) -> (f32, f32) {
+    let size = TILE_SIZE + 1.0;
+    let x = (screen_width() / 2.0 - size / 2.0) + (x as f32 * size);
+    let y = (screen_height() / 2.0 - size / 2.0) + (y as f32 * size);
+    (x, y)
+}
 
+fn draw_block(texture: Texture2D, x: f32, y: f32, rotation: f32) {
     draw_texture_ex(
         texture,
         x,
