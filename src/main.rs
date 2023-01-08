@@ -1,6 +1,6 @@
 use ::rand::thread_rng;
 use macroquad::prelude::*;
-use std::time::Instant;
+use std::{fs, time::Instant};
 mod map;
 
 const TILE_SIZE: f32 = 16.0;
@@ -16,63 +16,53 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf())]
 async fn main() {
-    let mut history_index = 0;
-    // let assets = vec![
-    //     load_texture("assets/0.png").await.unwrap(),
-    //     load_texture("assets/1.png").await.unwrap(),
-    //     load_texture("assets/2.png").await.unwrap(),
-    //     load_texture("assets/3.png").await.unwrap(),
-    //     load_texture("assets/4.png").await.unwrap(),
-    // ];
-
-    let assets = vec![
-        load_texture("assets/custom/0.png").await.unwrap(),
-        load_texture("assets/custom/1.png").await.unwrap(),
-        load_texture("assets/custom/2.png").await.unwrap(),
-        load_texture("assets/custom/3.png").await.unwrap(),
+    let map_name = "custom";
+    let tile_size = 3;
+    let variants = vec![
+        // Woods
+        map::Variants {
+            index: 0,
+            weight: 1.0,
+            neighbors: vec![1],
+        },
+        // Grass
+        map::Variants {
+            index: 1,
+            weight: 1.0,
+            neighbors: vec![0, 2],
+        },
+        // Sand
+        map::Variants {
+            index: 2,
+            weight: 1.0,
+            neighbors: vec![1, 3],
+        },
+        // Water
+        map::Variants {
+            index: 3,
+            weight: 1.0,
+            neighbors: vec![2],
+        },
     ];
 
+    let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
+        .ok()
+        .map(|image| (image.decode().expect("Failed to decode map image!"), tile_size));
+
+    let config = map::Config { image, variants };
     let mut rng = thread_rng();
     let mut map = map::Map::new(40);
-    // let map_image = image::io::Reader::open("maps/test-5.png")
-    //     .expect("Failed to open map image!")
-    //     .decode()
-    //     .expect("Failed to decode map image!");
-
-    let config = map::Config {
-        image: None,
-        variants: vec![
-            // Woods
-            map::Variants {
-                index: 0,
-                weight: 1.0,
-                neighbors: vec![1],
-            },
-            // Grass
-            map::Variants {
-                index: 1,
-                weight: 1.0,
-                neighbors: vec![0, 2],
-            },
-            // Sand
-            map::Variants {
-                index: 2,
-                weight: 1.0,
-                neighbors: vec![1, 3],
-            },
-            // Water
-            map::Variants {
-                index: 3,
-                weight: 1.0,
-                neighbors: vec![2],
-            },
-        ],
-    };
-
     map.build(&mut rng, &config, false);
+
+    let asset_paths = fs::read_dir(format!("maps/{}/tiles", map_name).as_str()).unwrap();
+    let mut assets = vec![];
+    for path in asset_paths {
+        assets.push(load_texture(path.unwrap().path().display().to_string().as_str()).await.unwrap());
+    }
 
     let mut update_timer = Instant::now();
     let mut is_playing = false;
+    let mut history_index = 0;
 
     loop {
         clear_background(Color::from_rgba(26, 26, 26, 255));
