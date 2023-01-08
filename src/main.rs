@@ -32,8 +32,8 @@ async fn main() {
         .decode()
         .expect("Failed to decode map image!");
 
-    map.load_tiles(&mut map_image, 3);
-    map.build(&mut rng, true);
+    map.load_variants(&mut map_image, 3);
+    map.build(&mut rng, false);
 
     let mut update_timer = Instant::now();
     let mut is_playing = false;
@@ -52,10 +52,7 @@ async fn main() {
             is_playing = !is_playing;
         }
 
-        if is_playing
-            && update_timer.elapsed().as_secs_f32() > 0.05
-            && history_index < map.history.len() - 1
-        {
+        if is_playing && update_timer.elapsed().as_secs_f32() > 0.05 && history_index < map.history.len() - 1 {
             history_index += 1;
             update_timer = Instant::now();
         }
@@ -68,8 +65,8 @@ async fn main() {
             let (nx, ny) = get_xy(x, y);
 
             if let Some(tile) = tile {
-                let rotation = (tile.rotation.clone() as u8) as f32 * std::f32::consts::FRAC_PI_2;
-                draw_block(assets[tile.index], nx, ny, rotation);
+                let rotation = (tile.direction.clone() as u8) as f32 * std::f32::consts::FRAC_PI_2;
+                draw_block(assets[tile.asset], nx, ny, rotation);
             } else {
                 draw_rectangle(nx, ny, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
             }

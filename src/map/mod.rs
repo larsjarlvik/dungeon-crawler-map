@@ -1,13 +1,15 @@
-use self::tile::{Direction, GridTile, Tile};
 use image::DynamicImage;
 use itertools::Itertools;
 use rand::{rngs::ThreadRng, Rng};
 use std::time::Instant;
 mod tile;
+pub use tile::Direction;
+pub use tile::Edges;
+pub use tile::Tile;
 
 #[derive(Debug, Default, Clone)]
 pub struct Snapshot {
-    pub grid: Vec<Option<GridTile>>,
+    pub grid: Vec<Option<Tile>>,
 }
 
 #[derive(Debug)]
@@ -26,36 +28,44 @@ impl Map {
         }
     }
 
-    pub fn load_tiles(&mut self, image: &mut DynamicImage, tile_size: u32) {
-        let mut tiles = vec![];
+    pub fn load_variants(&mut self, image: &mut DynamicImage, tile_size: u32) {
+        let mut image_variants = vec![];
 
         for x in 0..(image.width() / tile_size) {
             for y in 0..(image.height() / tile_size) {
-                let varaint_img = image.crop(x * tile_size, y * tile_size, tile_size, tile_size);
-                let mut variant = Tile {
-                    edges: tile::get_edges(&varaint_img),
-                    index: (y * self.size as u32 + x) as usize,
-                    rotation: tile::Direction::North,
-                    image: varaint_img,
-                };
+                let index = (y * self.size as u32 + x) as usize;
+                let mut varaint_img = image.crop(x * tile_size, y * tile_size, tile_size, tile_size);
+                let mut direction = Direction::North;
 
                 // Rotate and store
                 for _ in 0..4 {
-                    tiles.push(variant.clone());
-                    variant = variant.rotate();
+                    image_variants.push((index, direction.clone(), varaint_img.clone()));
+                    varaint_img = varaint_img.rotate90();
+                    direction = match direction {
+                        Direction::North => Direction::East,
+                        Direction::East => Direction::South,
+                        Direction::South => Direction::West,
+                        Direction::West => Direction::North,
+                    };
                 }
             }
         }
 
-        self.variants = tiles;
-        self.history.push(Snapshot {
-            grid: self.variants.iter().map(GridTile::from_variant).collect(),
-        });
+        // Remove duplicates
+        image_variants.sort_by(|(_, _, a), (_, _, b)| a.as_bytes().cmp(b.as_bytes()));
+        image_variants.dedup_by(|(_, _, a), (_, _, b)| a.as_bytes() == b.as_bytes());
 
-        // Dedupe
-        self.variants.dedup_by(|a, b| a.image.as_bytes() == b.image.as_bytes());
+        self.variants = image_variants
+            .into_iter()
+            .map(|(index, direction, image)| Tile {
+                edges: tile::get_edges(&image),
+                asset: index,
+                direction,
+            })
+            .collect();
+
         self.history.push(Snapshot {
-            grid: self.variants.iter().map(GridTile::from_variant).collect(),
+            grid: self.variants.iter().map(|v| Some(v.clone())).collect(),
         });
     }
 
@@ -105,7 +115,7 @@ impl Map {
                 }
 
                 let variant = next_tile[rng.gen_range(0..next_tile.len())];
-                grid[*next_index] = GridTile::from_variant(&self.variants[variant]);
+                grid[*next_index] = Some(self.variants[variant].clone());
 
                 if step_by_step {
                     self.history.push(Snapshot { grid: grid.clone() });
@@ -116,7 +126,7 @@ impl Map {
         }
     }
 
-    fn get_free_neighbors(&self, grid: &[Option<GridTile>]) -> Vec<(usize, Vec<usize>)> {
+    fn get_free_neighbors(&self, grid: &[Option<Tile>]) -> Vec<(usize, Vec<usize>)> {
         (0..grid.len())
             .into_iter()
             .filter(|index| grid[*index].is_some())
@@ -140,13 +150,13 @@ impl Map {
             .collect()
     }
 
-    fn clear(&mut self, rng: &mut ThreadRng) -> Vec<Option<GridTile>> {
+    fn clear(&mut self, rng: &mut ThreadRng) -> Vec<Option<Tile>> {
         let mut grid = vec![None; self.size * self.size];
-        grid[rng.gen_range(0..(self.size * self.size))] = GridTile::from_variant(&self.variants[rng.gen_range(0..self.variants.len())]);
+        grid[rng.gen_range(0..(self.size * self.size))] = Some(self.variants[rng.gen_range(0..self.variants.len())].clone());
         grid
     }
 
-    fn get_possible_variants(&self, grid: &[Option<GridTile>], index: usize) -> Vec<usize> {
+    fn get_possible_variants(&self, grid: &[Option<Tile>], index: usize) -> Vec<usize> {
         let variants = self
             .variants
             .iter()
@@ -210,7 +220,7 @@ impl Map {
         None
     }
 
-    fn get_tile<'a>(&self, grid: &'a [Option<GridTile>], index: Option<usize>) -> Option<&'a GridTile> {
+    fn get_tile<'a>(&self, grid: &'a [Option<Tile>], index: Option<usize>) -> Option<&'a Tile> {
         match index {
             Some(index) => match grid.get(index) {
                 Some(tile) => tile.as_ref(),

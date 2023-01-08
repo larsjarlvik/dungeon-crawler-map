@@ -10,7 +10,7 @@ pub enum Direction {
 }
 
 #[derive(Debug, Clone, Hash)]
-pub struct TileEdges {
+pub struct Edges {
     pub north: Vec<u8>,
     pub east: Vec<u8>,
     pub south: Vec<u8>,
@@ -19,55 +19,19 @@ pub struct TileEdges {
 
 #[derive(Debug, Clone)]
 pub struct Tile {
-    pub edges: TileEdges,
-    pub index: usize,
-    pub rotation: Direction,
-    pub image: image::DynamicImage,
-}
-
-#[derive(Debug, Clone)]
-pub struct GridTile {
-    pub edges: TileEdges,
-    pub index: usize,
-    pub rotation: Direction,
-}
-
-impl Tile {
-    pub fn rotate(&self) -> Self {
-        let mut tile = self.clone();
-        tile.edges.north = self.edges.west.clone();
-        tile.edges.east = self.edges.north.clone();
-        tile.edges.south = self.edges.east.clone();
-        tile.edges.west = self.edges.south.clone();
-        tile.rotation = match self.rotation {
-            Direction::North => Direction::East,
-            Direction::East => Direction::South,
-            Direction::South => Direction::West,
-            Direction::West => Direction::North,
-        };
-        tile.image = tile.image.rotate90();
-        tile
-    }
+    pub edges: Edges,
+    pub asset: usize,
+    pub direction: Direction,
 }
 
 impl Hash for Tile {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.edges.hash(state);
-        self.rotation.hash(state);
+        self.direction.hash(state);
     }
 }
 
-impl GridTile {
-    pub fn from_variant(tile: &Tile) -> Option<Self> {
-        Some(Self {
-            edges: tile.edges.clone(),
-            index: tile.index,
-            rotation: tile.rotation.clone(),
-        })
-    }
-}
-
-pub fn get_edges(image: &image::DynamicImage) -> TileEdges {
+pub fn get_edges(image: &image::DynamicImage) -> Edges {
     let mut north = vec![];
     let mut south = vec![];
     let mut east = vec![];
@@ -83,5 +47,5 @@ pub fn get_edges(image: &image::DynamicImage) -> TileEdges {
         east.push(*image.get_pixel(image.width() - 1, y).0.first().unwrap());
     }
 
-    TileEdges { north, south, east, west }
+    Edges { north, south, east, west }
 }
