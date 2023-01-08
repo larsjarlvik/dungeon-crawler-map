@@ -33,19 +33,28 @@ async fn main() {
         .expect("Failed to decode map image!");
 
     map.load_tiles(&mut map_image, 3);
-    map.build(&mut rng, false);
+    map.build(&mut rng, true);
 
     let mut update_timer = Instant::now();
+    let mut is_playing = false;
 
     loop {
-        clear_background(BLACK);
+        clear_background(Color::from_rgba(26, 26, 26, 255));
 
         if is_key_pressed(KeyCode::Escape) {
             return;
         }
-        if is_key_down(KeyCode::Space)
+        if is_key_pressed(KeyCode::Enter) {
+            history_index += 1;
+            history_index %= map.history.len();
+        }
+        if is_key_pressed(KeyCode::Space) {
+            is_playing = !is_playing;
+        }
+
+        if is_playing
+            && update_timer.elapsed().as_secs_f32() > 0.05
             && history_index < map.history.len() - 1
-            && update_timer.elapsed().as_secs_f32() > 0.02
         {
             history_index += 1;
             update_timer = Instant::now();
