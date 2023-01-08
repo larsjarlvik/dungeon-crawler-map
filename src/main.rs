@@ -17,17 +17,23 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
     let mut history_index = 0;
+    // let assets = vec![
+    //     load_texture("assets/0.png").await.unwrap(),
+    //     load_texture("assets/1.png").await.unwrap(),
+    //     load_texture("assets/2.png").await.unwrap(),
+    //     load_texture("assets/3.png").await.unwrap(),
+    //     load_texture("assets/4.png").await.unwrap(),
+    // ];
+
     let assets = vec![
-        load_texture("assets/0.png").await.unwrap(),
-        load_texture("assets/1.png").await.unwrap(),
-        load_texture("assets/2.png").await.unwrap(),
-        load_texture("assets/3.png").await.unwrap(),
-        load_texture("assets/4.png").await.unwrap(),
+        load_texture("assets/custom/0.png").await.unwrap(),
+        load_texture("assets/custom/1.png").await.unwrap(),
+        load_texture("assets/custom/2.png").await.unwrap(),
     ];
 
     let mut rng = thread_rng();
-    let mut map = map::Map::new(60);
-    let map_image = image::io::Reader::open("maps/test-2.png")
+    let mut map = map::Map::new(40);
+    let map_image = image::io::Reader::open("maps/test-5.png")
         .expect("Failed to open map image!")
         .decode()
         .expect("Failed to decode map image!");
@@ -35,7 +41,23 @@ async fn main() {
     let variants = map::Variants {
         image: map_image,
         tile_size: 3,
-        weights: vec![],
+        config: vec![
+            map::VariantConfig {
+                index: 0,
+                weight: 10.0,
+                neighbors: vec![1],
+            },
+            map::VariantConfig {
+                index: 1,
+                weight: 1.0,
+                neighbors: vec![0, 2],
+            },
+            map::VariantConfig {
+                index: 2,
+                weight: 10.0,
+                neighbors: vec![1],
+            },
+        ],
     };
 
     map.build(&mut rng, &variants, false);
@@ -85,6 +107,7 @@ async fn main() {
 
         if is_key_pressed(KeyCode::R) {
             map.build(&mut rng, &variants, false);
+            history_index = map.history.len() - 1;
         }
         next_frame().await
     }
