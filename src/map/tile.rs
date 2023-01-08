@@ -22,6 +22,7 @@ pub struct Tile {
     pub edges: Edges,
     pub asset: usize,
     pub direction: Direction,
+    pub weight: f32,
 }
 
 impl Hash for Tile {

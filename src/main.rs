@@ -26,14 +26,19 @@ async fn main() {
     ];
 
     let mut rng = thread_rng();
-    let mut map = map::Map::new(40);
-    let mut map_image = image::io::Reader::open("maps/test-4.png")
+    let mut map = map::Map::new(60);
+    let map_image = image::io::Reader::open("maps/test-2.png")
         .expect("Failed to open map image!")
         .decode()
         .expect("Failed to decode map image!");
 
-    map.load_variants(&mut map_image, 3);
-    map.build(&mut rng, false);
+    let variants = map::Variants {
+        image: map_image,
+        tile_size: 3,
+        weights: vec![],
+    };
+
+    map.build(&mut rng, &variants, false);
 
     let mut update_timer = Instant::now();
     let mut is_playing = false;
@@ -78,6 +83,9 @@ async fn main() {
             }
         }
 
+        if is_key_pressed(KeyCode::R) {
+            map.build(&mut rng, &variants, false);
+        }
         next_frame().await
     }
 }

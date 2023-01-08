@@ -19,6 +19,12 @@ pub struct Map {
     pub variants: Vec<Tile>,
 }
 
+pub struct Variants {
+    pub tile_size: u32,
+    pub image: DynamicImage,
+    pub weights: Vec<(usize, f32)>,
+}
+
 impl Map {
     pub fn new(size: usize) -> Self {
         Self {
@@ -28,49 +34,14 @@ impl Map {
         }
     }
 
-    pub fn load_variants(&mut self, image: &mut DynamicImage, tile_size: u32) {
-        let mut image_variants = vec![];
+    pub fn build(&mut self, rng: &mut ThreadRng, variants: &Variants, log_history: bool) {
+        self.history.clear();
+        let time = Instant::now();
 
-        for x in 0..(image.width() / tile_size) {
-            for y in 0..(image.height() / tile_size) {
-                let index = (y * self.size as u32 + x) as usize;
-                let mut varaint_img = image.crop(x * tile_size, y * tile_size, tile_size, tile_size);
-                let mut direction = Direction::North;
-
-                // Rotate and store
-                for _ in 0..4 {
-                    image_variants.push((index, direction.clone(), varaint_img.clone()));
-                    varaint_img = varaint_img.rotate90();
-                    direction = match direction {
-                        Direction::North => Direction::East,
-                        Direction::East => Direction::South,
-                        Direction::South => Direction::West,
-                        Direction::West => Direction::North,
-                    };
-                }
-            }
-        }
-
-        // Remove duplicates
-        image_variants.sort_by(|(_, _, a), (_, _, b)| a.as_bytes().cmp(b.as_bytes()));
-        image_variants.dedup_by(|(_, _, a), (_, _, b)| a.as_bytes() == b.as_bytes());
-
-        self.variants = image_variants
-            .into_iter()
-            .map(|(index, direction, image)| Tile {
-                edges: tile::get_edges(&image),
-                asset: index,
-                direction,
-            })
-            .collect();
-
+        self.load_variants(variants);
         self.history.push(Snapshot {
             grid: self.variants.iter().map(|v| Some(v.clone())).collect(),
         });
-    }
-
-    pub fn build(&mut self, rng: &mut ThreadRng, log_history: bool) {
-        let time = Instant::now();
 
         let mut tries = 1;
         while !self.generate_map(rng, log_history) {
@@ -83,6 +54,54 @@ impl Map {
         println!("Map generated after {} tries", tries);
         println!("Time taken: {}", elapsed);
         println!("Per try: {}", elapsed / tries as f32);
+    }
+
+    fn load_variants(&mut self, variants: &Variants) {
+        let mut image_variants = vec![];
+
+        for x in 0..(variants.image.width() / variants.tile_size) {
+            for y in 0..(variants.image.height() / variants.tile_size) {
+                let index = (y * self.size as u32 + x) as usize;
+                let mut varaint_img = variants.image.clone().crop(
+                    x * variants.tile_size,
+                    y * variants.tile_size,
+                    variants.tile_size,
+                    variants.tile_size,
+                );
+                let mut direction = Direction::North;
+
+                // Rotate and store
+                for _ in 0..4 {
+                    let weight = variants
+                        .weights
+                        .iter()
+                        .find(|(w_index, _)| *w_index == index)
+                        .unwrap_or(&(index, 1.0))
+                        .1;
+
+                    let variant = Tile {
+                        asset: index,
+                        direction: direction.clone(),
+                        edges: tile::get_edges(&varaint_img),
+                        weight,
+                    };
+
+                    image_variants.push((variant, varaint_img.clone()));
+                    varaint_img = varaint_img.rotate90();
+                    direction = match direction {
+                        Direction::North => Direction::East,
+                        Direction::East => Direction::South,
+                        Direction::South => Direction::West,
+                        Direction::West => Direction::North,
+                    };
+                }
+            }
+        }
+
+        // Remove duplicates
+        image_variants.sort_by(|(_, a), (_, b)| a.as_bytes().cmp(b.as_bytes()));
+        image_variants.dedup_by(|(_, a), (_, b)| a.as_bytes() == b.as_bytes());
+        self.variants = image_variants.into_iter().map(|(tile, _)| tile).collect();
     }
 
     fn generate_map(&mut self, rng: &mut ThreadRng, step_by_step: bool) -> bool {
@@ -100,7 +119,11 @@ impl Map {
             let free_neighbors = self.get_free_neighbors(&grid);
             let least_entropy = free_neighbors
                 .iter()
-                .min_by(|(_, a_tile), (_, b_tile)| a_tile.len().cmp(&b_tile.len()))
+                .min_by(|(_, a_tile), (_, b_tile)| {
+                    let a_sum: f32 = a_tile.iter().map(|a| self.variants[*a].weight).sum();
+                    let b_sum: f32 = b_tile.iter().map(|b| self.variants[*b].weight).sum();
+                    a_sum.partial_cmp(&b_sum).unwrap()
+                })
                 .map(|(_, tile)| tile);
 
             if let Some(least_entropy) = least_entropy {
@@ -114,8 +137,7 @@ impl Map {
                     return false;
                 }
 
-                let variant = next_tile[rng.gen_range(0..next_tile.len())];
-                grid[*next_index] = Some(self.variants[variant].clone());
+                grid[*next_index] = Some(self.weighted_variant(rng, next_tile));
 
                 if step_by_step {
                     self.history.push(Snapshot { grid: grid.clone() });
@@ -124,6 +146,23 @@ impl Map {
                 return false;
             }
         }
+    }
+
+    fn weighted_variant(&self, rng: &mut ThreadRng, variants: &[usize]) -> Tile {
+        let sum_weight: f32 = self.variants.iter().map(|v| v.weight).sum();
+        let mut chosen = rng.gen_range(0.0..sum_weight).round();
+
+        let mut index = 0;
+        (0..variants.len()).for_each(|i| {
+            let weight = self.variants[variants[i]].weight;
+            if chosen < weight {
+                index = i;
+                return;
+            }
+            chosen -= weight;
+        });
+
+        self.variants[variants[index]].clone()
     }
 
     fn get_free_neighbors(&self, grid: &[Option<Tile>]) -> Vec<(usize, Vec<usize>)> {
