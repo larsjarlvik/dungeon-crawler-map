@@ -1,26 +1,9 @@
-use self::tile::{Direction, Tile, TileEdges};
+use self::tile::{Direction, GridTile, Tile};
 use image::DynamicImage;
 use itertools::Itertools;
 use rand::{rngs::ThreadRng, Rng};
 use std::time::Instant;
 mod tile;
-
-#[derive(Debug, Clone)]
-pub struct GridTile {
-    pub edges: TileEdges,
-    pub index: usize,
-    pub rotation: Direction,
-}
-
-impl GridTile {
-    pub fn from_variant(tile: &Tile) -> Self {
-        Self {
-            edges: tile.edges.clone(),
-            index: tile.index,
-            rotation: tile.rotation.clone(),
-        }
-    }
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Snapshot {
@@ -66,22 +49,13 @@ impl Map {
 
         self.variants = tiles;
         self.history.push(Snapshot {
-            grid: self
-                .variants
-                .iter()
-                .map(|t| Some(GridTile::from_variant(t)))
-                .collect(),
+            grid: self.variants.iter().map(GridTile::from_variant).collect(),
         });
 
         // Dedupe
-        self.variants
-            .dedup_by(|a, b| a.image.as_bytes() == b.image.as_bytes());
+        self.variants.dedup_by(|a, b| a.image.as_bytes() == b.image.as_bytes());
         self.history.push(Snapshot {
-            grid: self
-                .variants
-                .iter()
-                .map(|t| Some(GridTile::from_variant(t)))
-                .collect(),
+            grid: self.variants.iter().map(GridTile::from_variant).collect(),
         });
     }
 
@@ -122,9 +96,7 @@ impl Map {
             if let Some(least_entropy) = least_entropy {
                 let possibilties: Vec<&(usize, Vec<usize>)> = free_neighbors
                     .iter()
-                    .filter(|(index, _)| {
-                        self.get_possible_variants(&grid, *index).len() == least_entropy.len()
-                    })
+                    .filter(|(index, _)| self.get_possible_variants(&grid, *index).len() == least_entropy.len())
                     .collect();
 
                 let (next_index, next_tile) = possibilties[rng.gen_range(0..possibilties.len())];
@@ -133,7 +105,7 @@ impl Map {
                 }
 
                 let variant = next_tile[rng.gen_range(0..next_tile.len())];
-                grid[*next_index] = Some(GridTile::from_variant(&self.variants[variant]));
+                grid[*next_index] = GridTile::from_variant(&self.variants[variant]);
 
                 if step_by_step {
                     self.history.push(Snapshot { grid: grid.clone() });
@@ -170,9 +142,7 @@ impl Map {
 
     fn clear(&mut self, rng: &mut ThreadRng) -> Vec<Option<GridTile>> {
         let mut grid = vec![None; self.size * self.size];
-        grid[rng.gen_range(0..(self.size * self.size))] = Some(GridTile::from_variant(
-            &self.variants[rng.gen_range(0..self.variants.len())],
-        ));
+        grid[rng.gen_range(0..(self.size * self.size))] = GridTile::from_variant(&self.variants[rng.gen_range(0..self.variants.len())]);
         grid
     }
 
@@ -240,19 +210,13 @@ impl Map {
         None
     }
 
-    fn get_tile<'a>(
-        &self,
-        grid: &'a [Option<GridTile>],
-        index: Option<usize>,
-    ) -> Option<&'a GridTile> {
-        if let Some(index) = index {
-            if let Some(tile) = grid.get(index) {
-                tile.as_ref()
-            } else {
-                None
-            }
-        } else {
-            None
+    fn get_tile<'a>(&self, grid: &'a [Option<GridTile>], index: Option<usize>) -> Option<&'a GridTile> {
+        match index {
+            Some(index) => match grid.get(index) {
+                Some(tile) => tile.as_ref(),
+                None => None,
+            },
+            None => None,
         }
     }
 }

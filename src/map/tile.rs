@@ -25,6 +25,13 @@ pub struct Tile {
     pub image: image::DynamicImage,
 }
 
+#[derive(Debug, Clone)]
+pub struct GridTile {
+    pub edges: TileEdges,
+    pub index: usize,
+    pub rotation: Direction,
+}
+
 impl Tile {
     pub fn rotate(&self) -> Self {
         let mut tile = self.clone();
@@ -50,6 +57,16 @@ impl Hash for Tile {
     }
 }
 
+impl GridTile {
+    pub fn from_variant(tile: &Tile) -> Option<Self> {
+        Some(Self {
+            edges: tile.edges.clone(),
+            index: tile.index,
+            rotation: tile.rotation.clone(),
+        })
+    }
+}
+
 pub fn get_edges(image: &image::DynamicImage) -> TileEdges {
     let mut north = vec![];
     let mut south = vec![];
@@ -66,10 +83,5 @@ pub fn get_edges(image: &image::DynamicImage) -> TileEdges {
         east.push(*image.get_pixel(image.width() - 1, y).0.first().unwrap());
     }
 
-    TileEdges {
-        north,
-        south,
-        east,
-        west,
-    }
+    TileEdges { north, south, east, west }
 }
