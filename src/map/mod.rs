@@ -101,16 +101,14 @@ impl Map {
         println!("Per try: {}", elapsed / tries as f32);
     }
 
-    fn generate_map(&mut self, rng: &mut ThreadRng, log_history: bool) -> bool {
+    fn generate_map(&mut self, rng: &mut ThreadRng, step_by_step: bool) -> bool {
         let mut grid = self.clear(rng);
-        if log_history {
+        if step_by_step {
             self.history.push(Snapshot { grid: grid.clone() });
         }
 
-        let mut remaining = self.size * self.size - 1;
-
         loop {
-            if remaining == 0 {
+            if grid.iter().all(|tile| tile.is_some()) {
                 self.history.push(Snapshot { grid });
                 return true;
             }
@@ -137,14 +135,12 @@ impl Map {
                 let variant = next_tile[rng.gen_range(0..next_tile.len())];
                 grid[*next_index] = Some(GridTile::from_variant(&self.variants[variant]));
 
-                if log_history {
+                if step_by_step {
                     self.history.push(Snapshot { grid: grid.clone() });
                 }
             } else {
                 return false;
             }
-
-            remaining -= 1;
         }
     }
 
