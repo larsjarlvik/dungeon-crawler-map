@@ -9,7 +9,7 @@ pub enum Direction {
     West = 3,
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Default, Debug, Clone, Hash)]
 pub struct Edges {
     pub north: Vec<u8>,
     pub east: Vec<u8>,

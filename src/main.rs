@@ -29,38 +29,47 @@ async fn main() {
         load_texture("assets/custom/0.png").await.unwrap(),
         load_texture("assets/custom/1.png").await.unwrap(),
         load_texture("assets/custom/2.png").await.unwrap(),
+        load_texture("assets/custom/3.png").await.unwrap(),
     ];
 
     let mut rng = thread_rng();
     let mut map = map::Map::new(40);
-    let map_image = image::io::Reader::open("maps/test-5.png")
-        .expect("Failed to open map image!")
-        .decode()
-        .expect("Failed to decode map image!");
+    // let map_image = image::io::Reader::open("maps/test-5.png")
+    //     .expect("Failed to open map image!")
+    //     .decode()
+    //     .expect("Failed to decode map image!");
 
-    let variants = map::Variants {
-        image: map_image,
-        tile_size: 3,
-        config: vec![
-            map::VariantConfig {
+    let config = map::Config {
+        image: None,
+        variants: vec![
+            // Woods
+            map::Variants {
                 index: 0,
-                weight: 10.0,
+                weight: 1.0,
                 neighbors: vec![1],
             },
-            map::VariantConfig {
+            // Grass
+            map::Variants {
                 index: 1,
                 weight: 1.0,
                 neighbors: vec![0, 2],
             },
-            map::VariantConfig {
+            // Sand
+            map::Variants {
                 index: 2,
-                weight: 10.0,
-                neighbors: vec![1],
+                weight: 1.0,
+                neighbors: vec![1, 3],
+            },
+            // Water
+            map::Variants {
+                index: 3,
+                weight: 1.0,
+                neighbors: vec![2],
             },
         ],
     };
 
-    map.build(&mut rng, &variants, false);
+    map.build(&mut rng, &config, false);
 
     let mut update_timer = Instant::now();
     let mut is_playing = false;
@@ -106,7 +115,7 @@ async fn main() {
         }
 
         if is_key_pressed(KeyCode::R) {
-            map.build(&mut rng, &variants, false);
+            map.build(&mut rng, &config, false);
             history_index = map.history.len() - 1;
         }
         next_frame().await
