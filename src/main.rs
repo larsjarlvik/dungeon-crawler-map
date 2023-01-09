@@ -17,7 +17,6 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
     let map_name = "custom";
-    let tile_size = 3;
     let variants = vec![
         // Woods
         map::Variants {
@@ -45,11 +44,12 @@ async fn main() {
         },
     ];
 
-    let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
-        .ok()
-        .map(|image| (image.decode().expect("Failed to decode map image!"), tile_size));
+    // let tile_size = 3;
+    // let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
+    //     .ok()
+    //     .map(|image| (image.decode().expect("Failed to decode map image!"), tile_size));
 
-    let config = map::Config { image, variants };
+    let config = map::Config { image: None, variants };
     let mut rng = thread_rng();
     let mut map = map::Map::new(40);
     map.build(&mut rng, &config, false);
@@ -57,7 +57,7 @@ async fn main() {
     let asset_paths = fs::read_dir(format!("maps/{}/tiles", map_name).as_str()).unwrap();
     let mut assets = vec![];
     for path in asset_paths {
-        assets.push(load_texture(path.unwrap().path().display().to_string().as_str()).await.unwrap());
+        assets.push(load_texture(path.unwrap().path().as_os_str().to_str().unwrap()).await.unwrap());
     }
 
     let mut update_timer = Instant::now();

@@ -1,5 +1,7 @@
 use image::DynamicImage;
 use itertools::Itertools;
+use rand::distributions::WeightedIndex;
+use rand::prelude::Distribution;
 use rand::{rngs::ThreadRng, Rng};
 use std::time::Instant;
 mod tile;
@@ -176,20 +178,10 @@ impl Map {
     }
 
     fn weighted_variant(&self, rng: &mut ThreadRng, variants: &[usize]) -> Tile {
-        let sum_weight: f32 = self.variants.iter().rev().map(|v| v.weight).sum();
-        let mut chosen = rng.gen_range(0.0..sum_weight);
+        let weights: Vec<f32> = variants.iter().map(|v| self.variants[*v].weight).collect();
+        let dist = WeightedIndex::new(&weights).unwrap();
 
-        let mut index = 0;
-        (0..variants.len()).for_each(|i| {
-            let weight = self.variants[variants[i]].weight;
-            if chosen < weight {
-                index = i;
-                return;
-            }
-            chosen -= weight;
-        });
-
-        self.variants[variants[index]].clone()
+        self.variants[variants[dist.sample(rng)]].clone()
     }
 
     fn get_free_neighbors(&self, grid: &[Option<Tile>]) -> Vec<(usize, Vec<usize>)> {
@@ -229,25 +221,25 @@ impl Map {
             .enumerate()
             .filter_map(|(variant_index, variant)| {
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::North)) {
-                    if variant.edges.north != tile.edges.south && !tile.neighbors.contains(&variant_index) {
+                    if variant.edges.north != tile.edges.south && !variant.neighbors.contains(&tile.asset) {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::East)) {
-                    if variant.edges.east != tile.edges.west && !tile.neighbors.contains(&variant_index) {
+                    if variant.edges.east != tile.edges.west && !variant.neighbors.contains(&tile.asset) {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::South)) {
-                    if variant.edges.south != tile.edges.north && !tile.neighbors.contains(&variant_index) {
+                    if variant.edges.south != tile.edges.north && !variant.neighbors.contains(&tile.asset) {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::West)) {
-                    if variant.edges.west != tile.edges.east && !tile.neighbors.contains(&variant_index) {
+                    if variant.edges.west != tile.edges.east && !variant.neighbors.contains(&tile.asset) {
                         return None;
                     }
                 }
