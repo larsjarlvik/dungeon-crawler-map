@@ -221,25 +221,25 @@ impl Map {
             .enumerate()
             .filter_map(|(variant_index, variant)| {
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::North)) {
-                    if variant.edges.north != tile.edges.south && !variant.neighbors.contains(&tile.asset) {
+                    if !variant.neighbors.contains(&tile.asset) || variant.edges.north != tile.edges.south {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::East)) {
-                    if variant.edges.east != tile.edges.west && !variant.neighbors.contains(&tile.asset) {
+                    if !variant.neighbors.contains(&tile.asset) || variant.edges.east != tile.edges.west {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::South)) {
-                    if variant.edges.south != tile.edges.north && !variant.neighbors.contains(&tile.asset) {
+                    if !variant.neighbors.contains(&tile.asset) || variant.edges.south != tile.edges.north {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::West)) {
-                    if variant.edges.west != tile.edges.east && !variant.neighbors.contains(&tile.asset) {
+                    if !variant.neighbors.contains(&tile.asset) || variant.edges.west != tile.edges.east {
                         return None;
                     }
                 }

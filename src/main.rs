@@ -22,25 +22,25 @@ async fn main() {
         map::Variants {
             index: 0,
             weight: 1.0,
-            neighbors: vec![1],
+            neighbors: vec![0, 1],
         },
         // Grass
         map::Variants {
             index: 1,
             weight: 1.0,
-            neighbors: vec![0, 2],
+            neighbors: vec![0, 1, 2],
         },
         // Sand
         map::Variants {
             index: 2,
             weight: 1.0,
-            neighbors: vec![1, 3],
+            neighbors: vec![1, 2, 3],
         },
         // Water
         map::Variants {
             index: 3,
-            weight: 1.0,
-            neighbors: vec![2],
+            weight: 3.0,
+            neighbors: vec![2, 3],
         },
     ];
 
