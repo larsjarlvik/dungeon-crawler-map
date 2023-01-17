@@ -69,12 +69,12 @@ impl Map {
         for x in 0..(image.width() / tile_size) {
             for y in 0..(image.height() / tile_size) {
                 let index = (y * self.size as u32 + x) as usize;
-                let mut varaint_img = image.clone().crop(x * tile_size, y * tile_size, tile_size, tile_size);
+                let mut variant_img = image.clone().crop(x * tile_size, y * tile_size, tile_size, tile_size);
                 let mut direction = Direction::North;
 
                 for _ in 0..4 {
-                    variants.push((index, direction.clone(), varaint_img.clone()));
-                    varaint_img = varaint_img.rotate90();
+                    variants.push((index, direction.clone(), variant_img.clone()));
+                    variant_img = variant_img.rotate90();
                     direction = match direction {
                         Direction::North => Direction::East,
                         Direction::East => Direction::South,
@@ -109,20 +109,17 @@ impl Map {
                 direction,
                 edges,
                 weight: 1.0,
-                neighbors: vec![],
             });
         }
 
         for variant in config.variants.iter() {
             if let Some(existing) = self.variants.iter_mut().find(|v| v.asset == variant.index) {
                 existing.weight = variant.weight;
-                existing.neighbors = variant.neighbors.clone();
             } else {
                 self.variants.push(Tile {
                     asset: variant.index,
                     direction: Direction::North,
                     edges: Edges::default(),
-                    neighbors: variant.neighbors.clone(),
                     weight: variant.weight,
                 })
             }
@@ -221,25 +218,25 @@ impl Map {
             .enumerate()
             .filter_map(|(variant_index, variant)| {
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::North)) {
-                    if !variant.neighbors.contains(&tile.asset) || variant.edges.north != tile.edges.south {
+                    if variant.edges.north != tile.edges.south {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::East)) {
-                    if !variant.neighbors.contains(&tile.asset) || variant.edges.east != tile.edges.west {
+                    if variant.edges.east != tile.edges.west {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::South)) {
-                    if !variant.neighbors.contains(&tile.asset) || variant.edges.south != tile.edges.north {
+                    if variant.edges.south != tile.edges.north {
                         return None;
                     }
                 }
 
                 if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::West)) {
-                    if !variant.neighbors.contains(&tile.asset) || variant.edges.west != tile.edges.east {
+                    if variant.edges.west != tile.edges.east {
                         return None;
                     }
                 }

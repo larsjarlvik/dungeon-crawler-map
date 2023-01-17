@@ -23,7 +23,6 @@ pub struct Tile {
     pub asset: usize,
     pub direction: Direction,
     pub weight: f32,
-    pub neighbors: Vec<usize>,
 }
 
 impl Hash for Tile {

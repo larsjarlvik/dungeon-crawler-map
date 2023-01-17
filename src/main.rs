@@ -16,42 +16,42 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf())]
 async fn main() {
-    let map_name = "custom";
+    let map_name = "dungeon";
     let variants = vec![
         // Woods
-        map::Variants {
-            index: 0,
-            weight: 1.0,
-            neighbors: vec![0, 1],
-        },
-        // Grass
-        map::Variants {
-            index: 1,
-            weight: 1.0,
-            neighbors: vec![0, 1, 2],
-        },
-        // Sand
-        map::Variants {
-            index: 2,
-            weight: 1.0,
-            neighbors: vec![1, 2, 3],
-        },
-        // Water
-        map::Variants {
-            index: 3,
-            weight: 3.0,
-            neighbors: vec![2, 3],
-        },
+        // map::Variants {
+        //     index: 0,
+        //     weight: 1.0,
+        //     neighbors: vec![0, 1],
+        // },
+        // // Grass
+        // map::Variants {
+        //     index: 1,
+        //     weight: 1.0,
+        //     neighbors: vec![0, 1, 2],
+        // },
+        // // Sand
+        // map::Variants {
+        //     index: 2,
+        //     weight: 1.0,
+        //     neighbors: vec![1, 2, 3],
+        // },
+        // // Water
+        // map::Variants {
+        //     index: 3,
+        //     weight: 3.0,
+        //     neighbors: vec![2, 3],
+        // },
     ];
 
-    // let tile_size = 3;
-    // let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
-    //     .ok()
-    //     .map(|image| (image.decode().expect("Failed to decode map image!"), tile_size));
+    let tile_size = 5;
+    let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
+        .ok()
+        .map(|image| (image.decode().expect("Failed to decode map image!"), tile_size));
 
-    let config = map::Config { image: None, variants };
+    let config = map::Config { image, variants };
     let mut rng = thread_rng();
-    let mut map = map::Map::new(40);
+    let mut map = map::Map::new(32);
     map.build(&mut rng, &config, false);
 
     let asset_paths = fs::read_dir(format!("maps/{}/tiles", map_name).as_str()).unwrap();
@@ -92,7 +92,7 @@ async fn main() {
 
             if let Some(tile) = tile {
                 let rotation = (tile.direction.clone() as u8) as f32 * std::f32::consts::FRAC_PI_2;
-                draw_block(assets[tile.asset], nx, ny, rotation);
+                draw_tile(&assets, &tile, nx, ny, rotation);
             } else {
                 draw_rectangle(nx, ny, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
             }
@@ -119,7 +119,9 @@ fn get_xy(x: i32, y: i32) -> (f32, f32) {
     (x, y)
 }
 
-fn draw_block(texture: Texture2D, x: f32, y: f32, rotation: f32) {
+fn draw_tile(assets: &[Texture2D], tile: &map::Tile, x: f32, y: f32, rotation: f32) {
+    let texture = assets[tile.asset];
+
     draw_texture_ex(
         texture,
         x,
@@ -130,4 +132,18 @@ fn draw_block(texture: Texture2D, x: f32, y: f32, rotation: f32) {
             ..Default::default()
         },
     );
+
+    let n = 16.0 / 5.0;
+    for (i, _) in tile.edges.north.iter().enumerate().filter(|e| e.1 > &0) {
+        draw_rectangle(x + i as f32 * n, y, 2.0, 2.0, GREEN);
+    }
+    for (i, _) in tile.edges.east.iter().enumerate().filter(|e| e.1 > &0) {
+        draw_rectangle(x + 14.0, y + i as f32 * n, 2.0, 2.0, GREEN);
+    }
+    for (i, _) in tile.edges.south.iter().enumerate().filter(|e| e.1 > &0) {
+        draw_rectangle(x + i as f32 * n, y + 14.0, 2.0, 2.0, GREEN);
+    }
+    for (i, _) in tile.edges.west.iter().enumerate().filter(|e| e.1 > &0) {
+        draw_rectangle(x, y + i as f32 * n, 2.0, 2.0, GREEN);
+    }
 }
