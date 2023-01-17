@@ -17,7 +17,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
     let map_name = "dungeon";
-    let variants = vec![map::Variants { index: 5, weight: 10.0 }];
+    let variants = vec![map::Variants { index: 5, weight: 2.0 }];
 
     let tile_size = 5;
     let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))
@@ -26,7 +26,7 @@ async fn main() {
 
     let config = map::Config { image, variants };
     let mut rng = thread_rng();
-    let mut map = map::Map::new(32);
+    let mut map = map::Map::new(14);
     map.build(&mut rng, &config, false);
 
     let mut asset_paths: Vec<_> = fs::read_dir(format!("maps/{}/tiles", map_name).as_str())
@@ -112,6 +112,10 @@ fn draw_tile(assets: &[Texture2D], tile: &map::Tile, x: f32, y: f32, rotation: f
             ..Default::default()
         },
     );
+
+    if tile.path {
+        draw_rectangle(x + 6.0, y + 6.0, 4.0, 4.0, DARKBLUE);
+    }
 
     let n = 16.0 / 5.0;
     for (i, _) in tile.edges.north.iter().enumerate().filter(|e| e.1 > &0) {

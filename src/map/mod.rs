@@ -4,10 +4,13 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 use rand::{rngs::ThreadRng, Rng};
 use std::time::Instant;
+mod direction;
+mod pathfinding;
 mod tile;
-pub use tile::Direction;
 pub use tile::Edges;
 pub use tile::Tile;
+
+use self::direction::Direction;
 
 #[derive(Debug, Default, Clone)]
 pub struct Snapshot {
@@ -49,10 +52,39 @@ impl Map {
             grid: self.variants.iter().map(|v| Some(v.clone())).collect(),
         });
 
-        let mut tries = 1;
-        while !self.generate_map(rng, log_history) {
+        let mut tries = 0;
+
+        loop {
             tries += 1;
-            self.history.clear();
+            let map_ok = self.generate_map(rng, log_history);
+
+            if map_ok {
+                let mut snapshot = self.history.last().unwrap().clone();
+                let pathfinding = pathfinding::Pathfinding::new(self.size, snapshot.grid.clone());
+
+                match pathfinding.test((0, 0), (self.size - 1, self.size - 1)) {
+                    Some((tiles, _)) => {
+                        for index in tiles {
+                            snapshot.grid[index].as_mut().unwrap().path = true;
+                        }
+
+                        self.history.push(snapshot.clone());
+
+                        for x in 0..self.size {
+                            for y in 0..self.size {
+                                let start = y * self.size + x;
+                                if pathfinding.test((x, y), (0, 0)).is_none() {
+                                    snapshot.grid[start] = None;
+                                }
+                            }
+                        }
+
+                        self.history.push(snapshot.clone());
+                        break;
+                    }
+                    None => {}
+                }
+            }
         }
 
         let elapsed = time.elapsed().as_secs_f32();
@@ -107,19 +139,13 @@ impl Map {
                 direction,
                 edges,
                 weight: 1.0,
+                path: false,
             });
         }
 
         for variant in config.variants.iter() {
             if let Some(existing) = self.variants.iter_mut().find(|v| v.asset == variant.index) {
                 existing.weight = variant.weight;
-            } else {
-                self.variants.push(Tile {
-                    asset: variant.index,
-                    direction: Direction::North,
-                    edges: Edges::default(),
-                    weight: variant.weight,
-                })
             }
         }
 
@@ -185,10 +211,10 @@ impl Map {
             .filter(|index| grid[*index].is_some())
             .flat_map(|index| {
                 let neighbors = [
-                    self.move_index(index, Direction::North),
-                    self.move_index(index, Direction::East),
-                    self.move_index(index, Direction::South),
-                    self.move_index(index, Direction::West),
+                    direction::move_index(index, self.size, Direction::North),
+                    direction::move_index(index, self.size, Direction::East),
+                    direction::move_index(index, self.size, Direction::South),
+                    direction::move_index(index, self.size, Direction::West),
                 ];
 
                 neighbors.into_iter().flatten().filter_map(|index| {
@@ -215,7 +241,7 @@ impl Map {
             .iter()
             .enumerate()
             .filter_map(|(variant_index, variant)| {
-                if let Some(north) = self.move_index(index, Direction::North) {
+                if let Some(north) = direction::move_index(index, self.size, Direction::North) {
                     if let Some(tile) = &grid[north] {
                         if variant.edges.north != tile.edges.south {
                             return None;
@@ -225,7 +251,7 @@ impl Map {
                     return None;
                 }
 
-                if let Some(east) = self.move_index(index, Direction::East) {
+                if let Some(east) = direction::move_index(index, self.size, Direction::East) {
                     if let Some(tile) = &grid[east] {
                         if variant.edges.east != tile.edges.west {
                             return None;
@@ -235,7 +261,7 @@ impl Map {
                     return None;
                 }
 
-                if let Some(south) = self.move_index(index, Direction::South) {
+                if let Some(south) = direction::move_index(index, self.size, Direction::South) {
                     if let Some(tile) = &grid[south] {
                         if variant.edges.south != tile.edges.north {
                             return None;
@@ -245,7 +271,7 @@ impl Map {
                     return None;
                 }
 
-                if let Some(west) = self.move_index(index, Direction::West) {
+                if let Some(west) = direction::move_index(index, self.size, Direction::West) {
                     if let Some(tile) = &grid[west] {
                         if variant.edges.west != tile.edges.east {
                             return None;
@@ -260,32 +286,5 @@ impl Map {
             .collect();
 
         variants
-    }
-
-    fn move_index(&self, current: usize, direction: Direction) -> Option<usize> {
-        match direction {
-            Direction::North => {
-                if current > self.size {
-                    return Some(current - self.size);
-                }
-            }
-            Direction::East => {
-                if current % self.size + 1 < self.size {
-                    return Some(current + 1);
-                }
-            }
-            Direction::South => {
-                if current + self.size < self.size * self.size {
-                    return Some(current + self.size);
-                }
-            }
-            Direction::West => {
-                if current % self.size > 0 {
-                    return Some(current - 1);
-                }
-            }
-        }
-
-        None
     }
 }

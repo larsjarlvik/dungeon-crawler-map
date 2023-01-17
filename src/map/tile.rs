@@ -1,13 +1,6 @@
+use super::direction::Direction;
 use image::GenericImageView;
 use std::hash::{Hash, Hasher};
-
-#[derive(Debug, Clone, Hash)]
-pub enum Direction {
-    North = 0,
-    East = 1,
-    South = 2,
-    West = 3,
-}
 
 #[derive(Default, Debug, Clone, Hash)]
 pub struct Edges {
@@ -17,12 +10,16 @@ pub struct Edges {
     pub west: Vec<u8>,
 }
 
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct Pos(i32, i32);
+
 #[derive(Debug, Clone)]
 pub struct Tile {
     pub edges: Edges,
     pub asset: usize,
     pub direction: Direction,
     pub weight: f32,
+    pub path: bool,
 }
 
 impl Hash for Tile {
