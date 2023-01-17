@@ -17,32 +17,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
     let map_name = "dungeon";
-    let variants = vec![
-        // Woods
-        // map::Variants {
-        //     index: 0,
-        //     weight: 1.0,
-        //     neighbors: vec![0, 1],
-        // },
-        // // Grass
-        // map::Variants {
-        //     index: 1,
-        //     weight: 1.0,
-        //     neighbors: vec![0, 1, 2],
-        // },
-        // // Sand
-        // map::Variants {
-        //     index: 2,
-        //     weight: 1.0,
-        //     neighbors: vec![1, 2, 3],
-        // },
-        // // Water
-        // map::Variants {
-        //     index: 3,
-        //     weight: 3.0,
-        //     neighbors: vec![2, 3],
-        // },
-    ];
+    let variants = vec![map::Variants { index: 5, weight: 10.0 }];
 
     let tile_size = 5;
     let image = image::io::Reader::open(format!("maps/{map_name}/map.png"))

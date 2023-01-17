@@ -24,7 +24,6 @@ pub struct Map {
 pub struct Variants {
     pub index: usize,
     pub weight: f32,
-    pub neighbors: Vec<usize>,
 }
 
 pub struct Config {
