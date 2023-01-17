@@ -85,8 +85,8 @@ impl Map {
             }
         }
 
-        variants.sort_by(|(_, _, a), (_, _, b)| a.as_bytes().cmp(b.as_bytes()));
-        variants.dedup_by(|(_, _, a), (_, _, b)| a.as_bytes() == b.as_bytes());
+        // variants.sort_by(|(_, _, a), (_, _, b)| a.as_bytes().cmp(b.as_bytes()));
+        // variants.dedup_by(|(_, _, a), (_, _, b)| a.as_bytes() == b.as_bytes());
 
         variants
             .into_iter()

@@ -54,10 +54,15 @@ async fn main() {
     let mut map = map::Map::new(32);
     map.build(&mut rng, &config, false);
 
-    let asset_paths = fs::read_dir(format!("maps/{}/tiles", map_name).as_str()).unwrap();
+    let mut asset_paths: Vec<_> = fs::read_dir(format!("maps/{}/tiles", map_name).as_str())
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    asset_paths.sort_by_key(|dir| dir.path());
+
     let mut assets = vec![];
     for path in asset_paths {
-        assets.push(load_texture(path.unwrap().path().as_os_str().to_str().unwrap()).await.unwrap());
+        assets.push(load_texture(path.path().as_os_str().to_str().unwrap()).await.unwrap());
     }
 
     let mut update_timer = Instant::now();
