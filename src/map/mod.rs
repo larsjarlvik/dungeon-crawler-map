@@ -215,28 +215,44 @@ impl Map {
             .iter()
             .enumerate()
             .filter_map(|(variant_index, variant)| {
-                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::North)) {
-                    if variant.edges.north != tile.edges.south {
-                        return None;
+                if let Some(north) = self.move_index(index, Direction::North) {
+                    if let Some(tile) = &grid[north] {
+                        if variant.edges.north != tile.edges.south {
+                            return None;
+                        }
                     }
+                } else if variant.edges.north.iter().any(|e| e > &0) {
+                    return None;
                 }
 
-                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::East)) {
-                    if variant.edges.east != tile.edges.west {
-                        return None;
+                if let Some(east) = self.move_index(index, Direction::East) {
+                    if let Some(tile) = &grid[east] {
+                        if variant.edges.east != tile.edges.west {
+                            return None;
+                        }
                     }
+                } else if variant.edges.east.iter().any(|e| e > &0) {
+                    return None;
                 }
 
-                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::South)) {
-                    if variant.edges.south != tile.edges.north {
-                        return None;
+                if let Some(south) = self.move_index(index, Direction::South) {
+                    if let Some(tile) = &grid[south] {
+                        if variant.edges.south != tile.edges.north {
+                            return None;
+                        }
                     }
+                } else if variant.edges.south.iter().any(|e| e > &0) {
+                    return None;
                 }
 
-                if let Some(tile) = self.get_tile(grid, self.move_index(index, Direction::West)) {
-                    if variant.edges.west != tile.edges.east {
-                        return None;
+                if let Some(west) = self.move_index(index, Direction::West) {
+                    if let Some(tile) = &grid[west] {
+                        if variant.edges.west != tile.edges.east {
+                            return None;
+                        }
                     }
+                } else if variant.edges.west.iter().any(|e| e > &0) {
+                    return None;
                 }
 
                 Some(variant_index)
@@ -271,15 +287,5 @@ impl Map {
         }
 
         None
-    }
-
-    fn get_tile<'a>(&self, grid: &'a [Option<Tile>], index: Option<usize>) -> Option<&'a Tile> {
-        match index {
-            Some(index) => match grid.get(index) {
-                Some(tile) => tile.as_ref(),
-                None => None,
-            },
-            None => None,
-        }
     }
 }
