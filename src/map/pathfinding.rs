@@ -49,13 +49,11 @@ impl Pathfinding {
         let start = start.1 * self.size + start.0;
         let goal = goal.1 * self.size + goal.0;
 
-        let result = astar(
+        astar(
             &start,
             |p| self.get_successors(*p).iter().map(|s| (*s, 1)).collect::<Vec<_>>(),
             |p| self.distance(*p, goal),
             |p| *p == goal,
-        );
-
-        result
+        )
     }
 }

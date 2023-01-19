@@ -62,27 +62,24 @@ impl Map {
                 let mut snapshot = self.history.last().unwrap().clone();
                 let pathfinding = pathfinding::Pathfinding::new(self.size, snapshot.grid.clone());
 
-                match pathfinding.test((0, 0), (self.size - 1, self.size - 1)) {
-                    Some((tiles, _)) => {
-                        for index in tiles {
-                            snapshot.grid[index].as_mut().unwrap().path = true;
-                        }
+                if let Some((tiles, _)) = pathfinding.test((0, 0), (self.size - 1, self.size - 1)) {
+                    for index in tiles {
+                        snapshot.grid[index].as_mut().unwrap().path = true;
+                    }
 
-                        self.history.push(snapshot.clone());
+                    self.history.push(snapshot.clone());
 
-                        for x in 0..self.size {
-                            for y in 0..self.size {
-                                let start = y * self.size + x;
-                                if pathfinding.test((x, y), (0, 0)).is_none() {
-                                    snapshot.grid[start] = None;
-                                }
+                    for x in 0..self.size {
+                        for y in 0..self.size {
+                            let start = y * self.size + x;
+                            if pathfinding.test((x, y), (0, 0)).is_none() {
+                                snapshot.grid[start] = None;
                             }
                         }
-
-                        self.history.push(snapshot.clone());
-                        break;
                     }
-                    None => {}
+
+                    self.history.push(snapshot.clone());
+                    break;
                 }
             }
         }
