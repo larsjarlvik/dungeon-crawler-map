@@ -72,7 +72,7 @@ async fn main() {
 
             if let Some(tile) = tile {
                 let rotation = (tile.direction.clone() as u8) as f32 * std::f32::consts::FRAC_PI_2;
-                draw_tile(&assets, &tile, nx, ny, rotation);
+                draw_tile(&assets, tile, nx, ny, rotation);
             } else {
                 draw_rectangle(nx, ny, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
             }
