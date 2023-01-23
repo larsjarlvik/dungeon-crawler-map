@@ -10,6 +10,14 @@ pub struct Edges {
     pub west: Vec<u8>,
 }
 
+#[derive(Debug, Clone)]
+pub enum Path {
+    Entrance,
+    Track,
+    Exit,
+    None,
+}
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Pos(i32, i32);
 
@@ -19,7 +27,7 @@ pub struct Tile {
     pub asset: usize,
     pub direction: Direction,
     pub weight: f32,
-    pub path: bool,
+    pub path: Path,
 }
 
 impl Hash for Tile {

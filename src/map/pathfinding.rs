@@ -34,12 +34,12 @@ fn distance((px, py): grid::Position, (gx, gy): grid::Position) -> usize {
     ((px as i32 - gx as i32).abs() + (py as i32 - gy as i32).abs()) as usize
 }
 
-pub fn test(grid: &Grid, start: grid::Position, goal: grid::Position) -> Option<(Vec<grid::Position>, usize)> {
+pub fn test(grid: &Grid, entrance: grid::Position, exit: grid::Position) -> Option<(Vec<grid::Position>, usize)> {
     let result = astar(
-        &start,
+        &entrance,
         |p| get_successors(grid, p).iter().map(|s| (*s, 1)).collect::<Vec<_>>(),
-        |p| distance(*p, goal),
-        |p| *p == goal,
+        |p| distance(*p, exit),
+        |p| *p == exit,
     );
 
     result

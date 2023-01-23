@@ -62,4 +62,19 @@ impl Grid {
 
         None
     }
+
+    pub fn get_by_asset(&self, asset: usize) -> Vec<Position> {
+        let mut matches = vec![];
+        for y in 0..self.size {
+            for x in 0..self.size {
+                if let Some(tile) = self.get(&(x, y)) {
+                    if tile.asset == asset {
+                        matches.push((x, y));
+                    }
+                }
+            }
+        }
+
+        matches
+    }
 }

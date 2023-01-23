@@ -3,17 +3,20 @@ use itertools::Itertools;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 use rand::{rngs::ThreadRng, Rng};
+use std::ops::Range;
 use std::time::Instant;
 mod grid;
 mod pathfinding;
 mod tile;
 use self::grid::{Direction, Grid, Position};
 pub use tile::Edges;
+pub use tile::Path;
 pub use tile::Tile;
 
 #[derive(Debug)]
 pub struct Map {
     pub size: usize,
+    pub path_length: Range<usize>,
     pub history: Vec<Grid>,
     pub variants: Vec<Tile>,
 }
@@ -21,6 +24,19 @@ pub struct Map {
 pub struct Variants {
     pub index: usize,
     pub weight: f32,
+    pub entrance: bool,
+    pub exit: bool,
+}
+
+impl Default for Variants {
+    fn default() -> Self {
+        Self {
+            index: Default::default(),
+            weight: 1.0,
+            entrance: false,
+            exit: false,
+        }
+    }
 }
 
 pub struct Config {
@@ -29,11 +45,21 @@ pub struct Config {
 }
 
 impl Map {
-    pub fn new(size: usize) -> Self {
+    pub fn new(size: usize, path_length: Range<usize>) -> Self {
         Self {
             size,
+            path_length,
             history: vec![],
             variants: vec![],
+        }
+    }
+
+    fn pick_entrance_exit(&self, rng: &mut ThreadRng, grid: &Grid, variants: Vec<usize>) -> grid::Position {
+        if variants.len() > 0 {
+            let candidates = grid.get_by_asset(variants[rng.gen_range(0..variants.len())]);
+            candidates[rng.gen_range(0..candidates.len())]
+        } else {
+            (rng.gen_range(0..grid.size - 1), rng.gen_range(0..grid.size - 1))
         }
     }
 
@@ -52,30 +78,56 @@ impl Map {
         loop {
             tries += 1;
             let map_ok = self.generate_map(rng, log_history);
-            let grid = self.history.last().unwrap().clone();
-            self.history.push(grid.clone());
 
             if map_ok {
                 let mut grid = self.history.last().unwrap().clone();
 
-                match pathfinding::test(&grid, (0, 0), (grid.size - 1, grid.size - 1)) {
-                    Some((tiles, _)) => {
-                        for index in tiles {
-                            grid.get_mut(&index).as_mut().unwrap().path = true;
-                        }
+                let entrance = self.pick_entrance_exit(
+                    rng,
+                    &grid,
+                    config
+                        .variants
+                        .iter()
+                        .filter_map(|v| if v.entrance { Some(v.index) } else { None })
+                        .collect(),
+                );
 
-                        self.history.push(grid.clone());
+                let exit = self.pick_entrance_exit(
+                    rng,
+                    &grid,
+                    config
+                        .variants
+                        .iter()
+                        .filter_map(|v| if v.exit { Some(v.index) } else { None })
+                        .collect(),
+                );
 
-                        for x in 0..grid.size {
-                            for y in 0..grid.size {
-                                if pathfinding::test(&grid, (x, y), (0, 0)).is_none() {
-                                    grid.set(&(x, y), None);
+                match pathfinding::test(&grid, entrance, exit) {
+                    Some((tiles, length)) => {
+                        if self.path_length.contains(&length) {
+                            for index in tiles {
+                                grid.get_mut(&index).as_mut().unwrap().path = if index == entrance {
+                                    Path::Entrance
+                                } else if index == exit {
+                                    Path::Exit
+                                } else {
+                                    Path::Track
+                                };
+                            }
+
+                            self.history.push(grid.clone());
+
+                            for x in 0..grid.size {
+                                for y in 0..grid.size {
+                                    if pathfinding::test(&grid, (x, y), exit).is_none() {
+                                        grid.set(&(x, y), None);
+                                    }
                                 }
                             }
-                        }
 
-                        self.history.push(grid.clone());
-                        break;
+                            self.history.push(grid.clone());
+                            break;
+                        }
                     }
                     None => {}
                 }
@@ -134,7 +186,7 @@ impl Map {
                 direction,
                 edges,
                 weight: 1.0,
-                path: false,
+                path: Path::None,
             });
         }
 
