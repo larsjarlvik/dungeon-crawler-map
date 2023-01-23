@@ -1,4 +1,4 @@
-use super::direction::Direction;
+use super::grid::Direction;
 use image::GenericImageView;
 use std::hash::{Hash, Hasher};
 

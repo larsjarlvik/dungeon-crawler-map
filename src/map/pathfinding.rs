@@ -1,61 +1,46 @@
-use super::{
-    direction::{self, Direction},
-    Tile,
-};
+use super::grid::{self, Direction, Grid, Position};
 use pathfinding::prelude::astar;
 
-pub struct Pathfinding {
-    size: usize,
-    grid: Vec<Tile>,
+fn get_successors(grid: &Grid, position: &grid::Position) -> Vec<Position> {
+    let mut successors = Vec::new();
+
+    if let Some(tile) = grid.get(position) {
+        if tile.edges.north.iter().any(|e| e > &0) {
+            if let Some(next) = grid.move_position(position, Direction::North) {
+                successors.push(next);
+            }
+        }
+        if tile.edges.east.iter().any(|e| e > &0) {
+            if let Some(next) = grid.move_position(position, Direction::East) {
+                successors.push(next);
+            }
+        }
+        if tile.edges.south.iter().any(|e| e > &0) {
+            if let Some(next) = grid.move_position(position, Direction::South) {
+                successors.push(next);
+            }
+        }
+        if tile.edges.west.iter().any(|e| e > &0) {
+            if let Some(next) = grid.move_position(position, Direction::West) {
+                successors.push(next);
+            }
+        }
+    }
+
+    successors
 }
 
-impl Pathfinding {
-    pub fn new(size: usize, grid: Vec<Option<Tile>>) -> Self {
-        Self {
-            size,
-            grid: grid.into_iter().flatten().collect(),
-        }
-    }
+fn distance((px, py): grid::Position, (gx, gy): grid::Position) -> usize {
+    ((px as i32 - gx as i32).abs() + (py as i32 - gy as i32).abs()) as usize
+}
 
-    fn get_successors(&self, position: usize) -> Vec<usize> {
-        let mut successors = Vec::new();
+pub fn test(grid: &Grid, start: grid::Position, goal: grid::Position) -> Option<(Vec<grid::Position>, usize)> {
+    let result = astar(
+        &start,
+        |p| get_successors(grid, p).iter().map(|s| (*s, 1)).collect::<Vec<_>>(),
+        |p| distance(*p, goal),
+        |p| *p == goal,
+    );
 
-        if let Some(tile) = self.grid.get(position) {
-            if tile.edges.north.iter().any(|e| e > &0) {
-                successors.push(direction::move_index(position, self.size, Direction::North).unwrap());
-            }
-            if tile.edges.east.iter().any(|e| e > &0) {
-                successors.push(direction::move_index(position, self.size, Direction::East).unwrap());
-            }
-            if tile.edges.south.iter().any(|e| e > &0) {
-                successors.push(direction::move_index(position, self.size, Direction::South).unwrap());
-            }
-            if tile.edges.west.iter().any(|e| e > &0) {
-                successors.push(direction::move_index(position, self.size, Direction::West).unwrap());
-            }
-        }
-
-        successors
-    }
-
-    fn distance(&self, position: usize, goal: usize) -> usize {
-        let position = (position % self.size, position / self.size);
-        let goal = (goal % self.size, goal / self.size);
-
-        ((position.0 as i32 - goal.0 as i32).abs() + (position.1 as i32 - goal.1 as i32).abs()) as usize
-    }
-
-    pub fn test(&self, start: (usize, usize), goal: (usize, usize)) -> Option<(Vec<usize>, usize)> {
-        let start = start.1 * self.size + start.0;
-        let goal = goal.1 * self.size + goal.0;
-
-        let result = astar(
-            &start,
-            |p| self.get_successors(*p).iter().map(|s| (*s, 1)).collect::<Vec<_>>(),
-            |p| self.distance(*p, goal),
-            |p| *p == goal,
-        );
-
-        result
-    }
+    result
 }

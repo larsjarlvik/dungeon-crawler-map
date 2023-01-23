@@ -26,7 +26,7 @@ async fn main() {
 
     let config = map::Config { image, variants };
     let mut rng = thread_rng();
-    let mut map = map::Map::new(14);
+    let mut map = map::Map::new(12);
     map.build(&mut rng, &config, false);
 
     let mut asset_paths: Vec<_> = fs::read_dir(format!("maps/{}/tiles", map_name).as_str())
@@ -63,11 +63,11 @@ async fn main() {
             update_timer = Instant::now();
         }
 
-        let half_size = (map.size as i32) / 2;
-        let mut x: i32 = -half_size;
-        let mut y: i32 = -half_size;
+        let half_size = (map.history[history_index].size as i32) / 2;
+        let mut x = -half_size;
+        let mut y = -half_size;
 
-        for tile in map.history[history_index].grid.iter() {
+        for tile in map.history[history_index].tiles.iter() {
             let (nx, ny) = get_xy(x, y);
 
             if let Some(tile) = tile {
